@@ -1,0 +1,54 @@
+//------------------------------------------------
+//--- 010 Editor v2.0 Binary Template
+//
+//      File: GGPK-flat.bt
+//    Author: Inndy Lin
+//   Version: 0.1
+//   Purpose: Parse GGPK file.
+//  Category: Archive
+// File Mask: *.ggpk
+//  ID Bytes: [+4] 47 47 50 4b // "????GGPK"
+//   History:
+//   0.1   First release
+//------------------------------------------------
+
+struct GGPKRecord {
+    uint32 length;
+    char   type[4]; // FILE, GGPK, FREE, PDIR
+
+    if(type == "GGPK") {
+        uint32 count;
+        local int i;
+        for(i = 0; i < count; i++) {
+            uint64 offset;
+        }
+    } else if(type == "FILE") {
+        uint32  namelength;
+        uchar   hash[32];
+        wchar_t filename[namelength];
+        char    filedata[length - 8 - 4 - 32 - 2 * namelength];
+    } else if(type == "PDIR") {
+        uint32  namelength;
+        uint32  entrycount;
+        uchar   hash[32];
+        wchar_t name[namelength];
+
+        typedef struct {
+            uint32 namehash;
+            uint64 offset;
+        } GGPKPdirEntry;
+
+        local int i;
+        for(i = 0; i < entrycount; i++)
+            GGPKPdirEntry entries;
+    } else if(type == "FREE") {
+        char reserved[length - 8];
+    } else {
+        Warning("Parsing error. Template stopped.");
+        return -1;
+    }
+};
+
+LittleEndian();
+while(!FEof())
+	struct GGPKRecord record;
