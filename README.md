@@ -12,13 +12,17 @@ Under bash:
 ## Windows Sucks
 
 `ggls` won't work on Windows since MSVC doesn't support c99 standard and
-MingGW has bug when handling 64bits file offset.
+MinGW has bug when handling 64bits file offset.
 
-If you really want to use `ggls` under Windows, WSL is your friend.
+If you really want to use `ggls` under Windows, [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux) is your friend.
 
 ## Sample Output
 
 First column is path, second column is file offset (in hex), third is file length (in hex).
+
+Use this command to extract `tou.txt`:
+
+`dd if=Content.ggpk bs=1 of=tou.txt skip=$((0x1b9aca282)) count=$((0x10534))`
 
 ```
 $ VERBOSE=1 ./ggls Content.ggpk | grep '//Metadata/UI/'
