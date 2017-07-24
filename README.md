@@ -9,20 +9,17 @@ Under bash:
 
 `./ggls Content.ggpk` or `VERBOSE=1 ./ggls Content.ggpk`
 
-## Windows Sucks
+## Windows Problems
 
-`ggls` won't work on Windows since MSVC doesn't support c99 standard and
-MinGW has bug when handling 64bits file offset.
+`ggls` won't work with MinGW since there's bug when handling 64bits file offset.
 
-If you really want to use `ggls` under Windows, [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux) is your friend.
+If you want to run this program on Windows, you can use VisualStudio or get
+[Visual C++ Build Tools](http://landinghub.visualstudio.com/visual-cpp-build-tools)
+or using [WSL](https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux).
 
 ## Sample Output
 
 First column is path, second column is file offset (in hex), third is file length (in hex).
-
-Use this command to extract `tou.txt`:
-
-`dd if=Content.ggpk bs=1 of=tou.txt skip=$((0x1b9aca282)) count=$((0x10534))`
 
 ```
 $ VERBOSE=1 ./ggls Content.ggpk | grep '//Metadata/UI/'
@@ -63,6 +60,34 @@ $ VERBOSE=1 ./ggls Content.ggpk | grep '//Metadata/UI/'
 //Metadata/UI/InGameState/GarenaEscapeMenu.ui,1b9ac5930,1162
 //Metadata/UI/InGameState/CreateSteamAccountWindow.ui,1b9ac6af6,3678
 ```
+
+## How To Extract Resource From GGPK
+
+Use this command to extract `tou.txt`:
+
+`dd if=Content.ggpk bs=1 of=tou.txt skip=$((0x1b9aca282)) count=$((0x10534))`
+
+Or using python
+
+```python
+with open('Content.ggpk', 'rb') as fin:
+    fin.seek(0x1b9aca282)
+    with open('tou.txt', 'wb') as fout:
+        fout.write(fin.read(0x10534))
+```
+
+Or using 010 editor
+
+1. Press `Ctrl-Shift-A` (Select Range)
+2. Input Start: `1b9aca282` and Size: `10534` then press `Enter`
+3. Right click on selected area
+4. "Selection" -> "Save Selection"
+5. Done!
+
+## Warning
+
+`ggls` does not properly handle UTF-16LE encoding string within GGPK file, this program may
+broken in the future.
 
 ## References
 

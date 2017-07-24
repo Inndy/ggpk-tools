@@ -11,11 +11,27 @@
 #define SIG_PDIR MAKE_SIG('P','D','I','R')
 #define SIG_FREE MAKE_SIG('F','R','E','E')
 
+#ifdef _MSC_VER // Microsoft C compiler
+#define IS_MSVC
+#define fseek _fseeki64
+#define ftell _ftelli64
+#define PACKED
+#include <malloc.h>
+#else
+#include <alloca.h>
+#define PACKED __attribute__((__packed__))
+#endif
+
 
 int print_offset = 0;
 FILE *fp;
 
-struct __attribute__((__packed__)) GGPKEntry {
+#ifdef IS_MSVC
+#pragma pack(push)
+#pragma pack(1)
+#endif
+
+struct PACKED GGPKEntry {
 	uint32_t length;
 	union {
 		char     type[4];
@@ -23,21 +39,25 @@ struct __attribute__((__packed__)) GGPKEntry {
 	};
 };
 
-struct __attribute__((__packed__)) PDIREntry {
+struct PACKED PDIREntry {
 	uint32_t name_len;
 	uint32_t count;
 	uint8_t  hash[32];
 };
 
-struct __attribute__((__packed__)) PDIRSubEntry {
+struct PACKED PDIRSubEntry {
 	uint32_t namehash;
 	uint64_t offset;
 };
 
-struct __attribute__((__packed__)) FILEEntry {
+struct PACKED FILEEntry {
 	uint32_t name_len;
 	uint8_t  hash[32];
 };
+
+#ifdef IS_MSVC
+#pragma pack(pop)
+#endif
 
 #define ENSURE_READ_SIZE(buff, size) \
 	if(fread(buff, size, 1, fp) < 1) { \
@@ -68,8 +88,8 @@ void run_ggpk(char *path)
 			{
 				uint32_t count;
 				GGREAD(count);
-				uint64_t offsets[count];
-				GGREAD(offsets);
+				uint64_t *offsets = alloca(count * 8);
+				ENSURE_READ_SIZE(offsets, count * 8);
 
 				for(int i = 0; i < count; i++) {
 					fseek(fp, offsets[i], SEEK_SET);
@@ -82,21 +102,21 @@ void run_ggpk(char *path)
 				struct PDIREntry pdir;
 				GGREAD(pdir);
 
-				wchar_t namew[pdir.name_len];
+				wchar_t *namew = alloca(pdir.name_len * 2);
 				ENSURE_READ_SIZE(namew, pdir.name_len * 2);
 
-				char name[pdir.name_len + 1];
+				char *name = alloca(pdir.name_len + 1);
 				wchar2ansi(name, namew, pdir.name_len + 1);
 
 				size_t l = strlen(path);
-				char fullname[l + 1 + pdir.name_len];
+				char *fullname = alloca(l + 1 + pdir.name_len);
 				strncpy(fullname, path, l + 1);
 				strncat(fullname, "/", 2);
 
 				strncat(fullname, name, pdir.name_len + 1);
 
-				struct PDIRSubEntry entries[pdir.count];
-				GGREAD(entries);
+				struct PDIRSubEntry *entries = alloca(pdir.count * sizeof(struct PDIRSubEntry));
+				ENSURE_READ_SIZE(entries, pdir.count * sizeof(struct PDIRSubEntry));
 				for(int i = 0; i < pdir.count; i++) {
 					fseek(fp, entries[i].offset, SEEK_SET);
 					run_ggpk(fullname);
@@ -108,14 +128,14 @@ void run_ggpk(char *path)
 				struct FILEEntry file;
 				GGREAD(file);
 
-				wchar_t namew[file.name_len];
+				wchar_t *namew = alloca(file.name_len * 2);
 				ENSURE_READ_SIZE(namew, file.name_len * 2);
 
-				char name[file.name_len + 1];
+				char *name = alloca(file.name_len + 1);
 				wchar2ansi(name, namew, file.name_len + 1);
 
 				size_t l = strlen(path);
-				char fullname[l + 1 + file.name_len];
+				char *fullname = alloca(l + 1 + file.name_len);
 				strncpy(fullname, path, l + 1);
 				strncat(fullname, "/", 2);
 
@@ -123,7 +143,7 @@ void run_ggpk(char *path)
 
 				size_t filesize = hdr.length - sizeof(hdr) - sizeof(file) - file.name_len * 2;
 				if(print_offset)
-					printf("%s,%lx,%lx\n", fullname, ftell(fp), filesize);
+					printf("%s,%llx,%llx\n", fullname, (uint64_t)ftell(fp), (uint64_t)filesize);
 				else
 					puts(fullname);
 			}
@@ -131,7 +151,7 @@ void run_ggpk(char *path)
 		case SIG_FREE:
 			break;
 		default:
-			fprintf(stdout, "Invalid type\n");
+			fprintf(stderr, "Invalid type\n");
 			exit(1);
 	}
 }
